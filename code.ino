@@ -3,8 +3,6 @@ void setup() {
 }
 
 void loop() {
-    unsigned char confirm_byte;
-    confirm_byte = Serial.read();
-    if (confirm_byte == 0xFF)
-        Serial.println("hello");
+    Serial.println("hello");
+    delay(1000);
 }
