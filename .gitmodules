@@ -1,0 +1,3 @@
+[submodule "DataAnalysis-GP"]
+	path = DataAnalysis
+	url = https://github.com/JohnnyXiangyu/DataAnalysis-GP.git
