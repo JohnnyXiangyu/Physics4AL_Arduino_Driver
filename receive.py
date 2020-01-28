@@ -1,6 +1,6 @@
-from DataAnalysis.Serial_Communication import SerialPort
+from DataAnalysis_GP.Serial_Communication import SerialPort
 import time
-from DataAnalysis.Msvcrt_Input import usrInput
+from DataAnalysis_GP.Msvcrt_Input import usrInput
 
 class Arduino(SerialPort):
     '''
