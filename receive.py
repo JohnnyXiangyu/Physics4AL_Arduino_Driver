@@ -46,4 +46,5 @@ if __name__ == "__main__":
         print(data, end='')
         if control.getInput() == 2:
             break
+    board.m_port.flush()
     outFile.close()
