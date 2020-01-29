@@ -9,8 +9,7 @@ class Arduino(SerialPort):
         *note: prototype class will override derived class function definitions
     '''
 
-    def __init__(self):
-        br = 9600
+    def __init__(self, br = 9600):
         SerialPort.__init__(self, 'Arduino Uno', br)
 
     def sendData(self, purpose):
@@ -40,7 +39,7 @@ if __name__ == "__main__":
     fileName = input("Specify filename: ")
     outFile = open(fileName, 'w')
     control = usrInput()
-    board = Arduino() # initiate the port
+    board = Arduino(115200) # initiate the port
     while True:
         data = board.communicate()
         outFile.write(data.rstrip('\n'))
