@@ -1,4 +1,4 @@
 .vscode/settings.json
 .vscode/arduino.json
 __pycache__/
-code.ino
+*.ino
