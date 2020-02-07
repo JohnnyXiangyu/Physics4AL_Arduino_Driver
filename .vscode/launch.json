@@ -9,7 +9,7 @@
             "name": "Python: File (Integrated Terminal)",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "${workspaceFolder}/receive.py",
             "console": "integratedTerminal"
         }
     ]
