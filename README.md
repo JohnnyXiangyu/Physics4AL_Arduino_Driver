@@ -6,3 +6,7 @@
 ## Note
 
  These files are created in Windows 10, so they use CRLF endings.  
+
+## TODO
+
+ Flush input
