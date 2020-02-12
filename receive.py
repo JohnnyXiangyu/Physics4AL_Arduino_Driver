@@ -47,3 +47,5 @@ if __name__ == "__main__":
         if control.getInput() == 2:
             break
     outFile.close()
+    board = None
+    print('End of Trial')
