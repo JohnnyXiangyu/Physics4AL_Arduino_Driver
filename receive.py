@@ -44,7 +44,7 @@ if __name__ == "__main__":
         data = board.communicate()
         outFile.write(data.rstrip('\n'))
         print(data, end='')
-        if control.getInput() == 2:
+        if 'q' in control.getInput():
             break
     outFile.close()
     board = None
