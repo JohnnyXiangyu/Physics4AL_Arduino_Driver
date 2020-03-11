@@ -1,12 +1,65 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import App from './App';
-import * as serviceWorker from './serviceWorker';
 
-ReactDOM.render(<App />, document.getElementById('root'));
 
-// If you want your app to work offline and load faster, you can change
-// unregister() to register() below. Note this comes with some pitfalls.
-// Learn more about service workers: https://bit.ly/CRA-PWA
-serviceWorker.unregister();
+function GpButton(props) { // general purpose button styled
+    return <button
+        onClick={props.onClick}
+        className="general_purpose">
+            {props.text}
+        </button>;
+}
+
+
+class TrialView extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            state: "idle", // idle, active
+            buffer: [], // buffer for sensor readings
+        };
+    }
+
+    render() {
+        if (this.state.state === "idle") {
+            return <p>this is an idle tiral</p>;
+        }
+    }
+}
+
+
+class InitMenu extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            state: "init",
+        };
+    }
+
+    render() {
+        return <p>this is InitMenu</p>;
+    }
+}
+
+
+class Main extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            state: "init", // states: init, trial
+        }
+    }
+
+    render() {
+        if (this.state.state === "init") {
+            return <InitMenu />;
+        }
+        else if (this.state.state === "trial") {
+            return <TrialView />;
+        }
+    }
+}
+
+
+ReactDOM.render(<Main />, document.getElementById('root'));
