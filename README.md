@@ -9,4 +9,6 @@
 
 ## TODO
 
- Flush input
+### Create a react app that enable most of the operations for this app
+
+### Figure out how to start the app with a webpage
