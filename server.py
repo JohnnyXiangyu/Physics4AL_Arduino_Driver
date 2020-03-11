@@ -4,7 +4,7 @@ This is the top-level starting script for a flask server app
 
 from flask import Flask, request
 import json
-import DataAnalysis_GP
+import devices
 
 # set the project root directory as the static folder, you can set others.
 app = Flask(__name__,

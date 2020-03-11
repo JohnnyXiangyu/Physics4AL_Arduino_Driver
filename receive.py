@@ -28,7 +28,7 @@ class Arduino(SerialPort):
     
     def communicate(self, purpose=0xFF):
         '''specify purpose argument for a special confirmation code'''
-        receive = super().communicate(purpose)
+        receive = self.readData()
         str_receive = ""
         for char in receive:
             str_receive += str(chr(char))

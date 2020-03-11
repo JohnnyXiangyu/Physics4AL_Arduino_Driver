@@ -22,4 +22,18 @@ Start/end trial, mark event (user input taken by frontend, and an API takes that
 One volatile, used for API reads, the other is a larger and idle data structure that store all data so far.  
 On finish, both will be destroyed.  
 
+### Abstraction for device that implement the following
+
+* manual connecting
+
+* manual disconnecting
+
+* start data collection (which should keep running)
+
+* end data collection (stop receiving data)
+
+* buffer for raw data
+
+* API that translate each data line to a common interface
+
 ### Figure out how to start the app with a webpage
