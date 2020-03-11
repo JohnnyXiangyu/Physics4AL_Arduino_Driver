@@ -2,3 +2,4 @@
 .vscode/arduino.json
 __pycache__/
 *.ino
+static/
