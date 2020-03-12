@@ -4,3 +4,4 @@ __pycache__/
 *.ino
 static/
 testdriver.py
+*.csv
