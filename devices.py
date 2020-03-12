@@ -1,6 +1,7 @@
 from DataAnalysis_GP.Serial_Communication import SerialPort, PortError
 import multiprocessing
 import time
+import os
 
 
 class Error(Exception):
@@ -22,7 +23,7 @@ class SerialTextDevice:
 
     def __init__(self, name):
         self.name = name
-        self.port = None
+        # self.port = None
 
         # container for the child process which updates active buffer
         self.child_process = None
@@ -40,24 +41,27 @@ class SerialTextDevice:
         self.extra_timestamp = False
         self.delimiter = ","
 
-    def connectDevice(self, details={"name": "", "br": 9600}, extra_timestamp=False, delimiter=","):
-        """
-        Create a port instance and put into self.port.  
-        Details (name of instance, name of device and baud rate for serial device) will be passed by a dictionary.  
-        Current flushing strategy: let child process delay and flush.  
-        extra_timestamp option gives user flexibility over whether to add a driver code timestamp or not  
-        """
-        self.port = SerialPort(details['name'], details['br'])
-        if self.port.m_port == None:
-            err_text = self.port.m_error  # report error from port
-            # deallocate the port (let port definition do the freeing work)
-            self.port = None
-            raise(PortError(err_text))
-        else:
-            self.extra_timestamp = extra_timestamp
-            self.delimiter = delimiter
-            self.port.m_port.close()
-            return 'connect-success'  # return a success message
+    # def connectDevice(self, details={"name": "", "br": 9600}, extra_timestamp=False, delimiter=","):
+    #     """
+    #     Create a port instance and put into self.port.  
+    #     Details (name of instance, name of device and baud rate for serial device) will be passed by a dictionary.  
+    #     Current flushing strategy: let child process delay and flush.  
+    #     extra_timestamp option gives user flexibility over whether to add a driver code timestamp or not  
+    #     """
+    #     self.port = SerialPort(details['name'], details['br'])
+    #     if self.port.m_port == None:
+    #         err_text = self.port.m_error  # report error from port
+    #         # deallocate the port (let port definition do the freeing work)
+    #         self.port = None
+    #         raise(PortError(err_text))
+    #     else:
+    #         self.extra_timestamp = extra_timestamp
+    #         self.delimiter = delimiter
+    #         self.port.m_port.close()
+    #         return 'connect-success'  # return a success message
+
+    def __del__(self):
+        self.reset()
 
     def reset(self):
         """
@@ -69,36 +73,42 @@ class SerialTextDevice:
         self.endTrial()
         self.port = None
 
-    def readPort(self):
+    def readPort(self, details={"name": "", "br": 9600}, extra_timestamp=False, delimiter=","):
         """
         Read data from port.  
         For serial text device, it reads a line and put it into the buffer.  
         All read data will be converted to string for a serial text device.  
         """
-        if self.port.m_port == None:
-            self.child_pipe.close()
-            return
-        time.sleep(0.1)
-        self.port.m_port.open()
-        self.port.flushInput()
         self.parent_pipe.close()
+        port = SerialPort(details['name'], details['br'])
+        if port.m_port == None:
+            err_text = port.m_error  # report error from port
+            # deallocate the port (let port definition do the freeing work)
+            port = None
+            raise(PortError(err_text))
+        else:
+            self.extra_timestamp = extra_timestamp
+            self.delimiter = delimiter
+
+        time.sleep(0.1)
+        port.flushInput()
         self.child_pipe.send('child-started')
         while True:
+            new_data = port.readline()
+            new_line = ""
+            for byte in new_data:
+                new_line = new_line + str(chr(byte))
             try:
-                new_data = self.port.readline()
-                new_line = ""
-                for byte in new_data:
-                    new_line = new_line + str(chr(byte))
                 self.child_pipe.send((time.time() - self.timer, new_line))
-                #self.child_pipe.poll()
             except BrokenPipeError:
                 # when the other end is closed
                 print('parent pipe closed: exiting')
                 self.child_pipe.close()
-                self.port.m_port.close()
-                return
+                port.m_port.close()
+                break
+        return
 
-    def startTrial(self):
+    def startTrial(self, details={"name": "", "br": 9600}, extra_timestamp=False, delimiter=","):
         """
         Record current time in timer.  
         Then pipe and create child process that writes into active buffer.
@@ -106,7 +116,7 @@ class SerialTextDevice:
         """
         self.timer = time.time()
         self.parent_pipe, self.child_pipe = multiprocessing.Pipe()
-        self.child_process = multiprocessing.Process(target=self.readPort)
+        self.child_process = multiprocessing.Process(target=self.readPort, args=(details, extra_timestamp, delimiter))
         self.child_process.start()
         
         # block-wait for the child process to start properly
@@ -128,12 +138,16 @@ class SerialTextDevice:
             close parent pipe, join child process, then set pipes and child process to None  
         Finally it will return the latest version of active buffer  
         """
-        self.parent_pipe.close()
-        self.child_process.join()
-        temp_buffer = self.active_buffer.copy()
-        self.active_buffer = []
-        self.child_process = None
-        return temp_buffer
+        if self.is_active:
+            self.parent_pipe.close()
+            print('wait...')
+            self.child_process.join()
+            print('joined...')
+            temp_buffer = self.active_buffer.copy()
+            self.active_buffer = []
+            self.child_process = None
+            self.is_active = False
+            return temp_buffer
 
     def outputData(self):
         """
