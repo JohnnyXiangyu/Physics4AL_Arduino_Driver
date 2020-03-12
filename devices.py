@@ -1,67 +1,149 @@
-from DataAnalysis_GP.Serial_Communication import SerialPort
+from DataAnalysis_GP.Serial_Communication import SerialPort, PortError
+import multiprocessing
+import time
+
+
+class Error(Exception):
+    pass
+
+
+class DeviceError(Error):
+    def __init__(self, message):
+        self.message = message
 
 
 class SerialTextDevice:
     """
     Serial port device that return output in text format.  
     Supported operations: connect, start, stop, read, write  
+    This class uses multiprocessing to implement because readings from serial port is discrete.  
+    (There's no guarantee that driver code (the server) and a text serial device is synchronized.)
     """
 
-    def __init__(self):
-        self.name = ""
+    def __init__(self, name):
+        self.name = name
         self.port = None
 
-        self.child_process = None  # container for the child process which updates active buffer
-        self.pipe_buffer = [] # buffer that's written by child process
-        self.active_buffer = []  # buffer to be flushed
-        self.old_buffer = []  # buffer that's already flushed
+        # container for the child process which updates active buffer
+        self.child_process = None
 
-        self.active = False  # start = true, end = false
-        self.timer = 0  # timer that records the starting time
+        self.child_pipe = None      # buffer that's written by child process
+        self.parent_pipe = None
 
-    def connectDevice(self, details={"name": "", "deviceName": "", "baudRate": 9600}, flush_delay=0.1):
+        self.active_buffer = []     # buffer to be flushed
+
+        self.is_active = False         # start = true, end = false
+        # timer that records the starting time (in seconds)
+        self.timer = 0.0
+
+        # some formatting related issues
+        self.extra_timestamp = False
+        self.delimiter = ","
+
+    def connectDevice(self, details={"name": "", "baudRate": 9600}, extra_timestamp=False, delimiter=","):
         """
         Create a port instance and put into self.port.  
         Details (name of instance, name of device and baud rate for serial device) will be passed by a dictionary.  
-        Current flushing strategy: delay a certain number of seconds and flush.  
+        Current flushing strategy: let child process delay and flush.  
+        extra_timestamp option gives user flexibility over whether to add a driver code timestamp or not  
         """
-        pass
+        self.port = SerialPort(details['name'], details['br'])
+        if self.port.m_port == None:
+            err_text = self.port.m_error  # report error from port
+            # deallocate the port (let port definition do the freeing work)
+            self.port = None
+            raise(PortError(err_text))
+        else:
+            self.extra_timestamp = extra_timestamp
+            self.delimiter = delimiter
+            return 'connect-success'  # return a success message
 
-    def disconnectDevice(self):
+    def reset(self):
         """
-        Close self.port  
+        Free the following resources:  
+            child process (if there is one)
+            serial port instance (if there is one)
+        It's supposed to put device instance into its initial state
         """
-        pass
+        self.endTrial()
+        self.port = None
 
-    def startReading(self):
+    def __readPort(self):
         """
-        Flush the port, record current time in timer.  
-        Then pipe and create child process that writes into active buffer.  
-        Without a endReading() call, the program should keep pushing data into the buffer.  
+        Read data from port.  
+        For serial text device, it reads a line and put it into the buffer.  
+        All read data will be converted to string for a serial text device.  
         """
-        pass
+        while True:
+            if self.port.m_port == None:
+                self.child_pipe.close()
+                return
+            time.sleep(0.1)
+            self.port
+            self.child_pipe.send('child-started')
+            try:
+                new_data = self.port.readline()
+                new_line = ""
+                for byte in new_data:
+                    new_line = new_line + str(chr(byte))
+                self.child_pipe.send((time.time() - self.timer, new_line))
+            except EOFError:
+                # when the other end is closed
+                self.child_pipe.close()
+                return
 
-    def endReading(self):
+    def startTrial(self):
+        """
+        Record current time in timer.  
+        Then pipe and create child process that writes into active buffer.
+        Child process will write a message into pipe before it starts looping.    
+        """
+        self.timer = time.time()
+        self.parent_pipe, self.child_pipe = multiprocessing.Pipe()
+        self.child_process = multiprocessing.Process(target=self.__readPort)
+        
+        # block-wait for the child process to start properly
+        try:
+            start_message = self.parent_pipe.recv()
+        except EOFError:
+            raise(DeviceError('child process failed to start'))
+        if start_message != 'child-started':
+            raise(DeviceError('child process failed to start'))
+        else:
+            self.is_active = True
+
+    def endTrial(self):
         """
         Interrupt reading.  
         This function call is designed to be end of a trial:  
-            both local buffers are cleared
-            pipe will be closed and destructed  
-            child process terminated by sending a eof signal  
+            reset active buffer to empty, and return its previous contents  
+            close parent pipe, join child process, then set pipes and child process to None  
+        Finally it will return the latest version of active buffer  
         """
-        pass
-
-    def flushToFile(self):
-        """
-        Copy the current active buffer over to old buffer, output the contents to file.  
-        Then pop all written contents in active buffer.  
-        """
-        pass 
+        self.parent_pipe.close()
+        self.child_process.join()
+        temp_buffer = self.active_buffer.copy()
+        self.active_buffer = []
+        self.child_process = None
+        return temp_buffer
 
     def outputData(self):
         """
-        Copy current pipe buffer over, append them to active buffer,  
+        Copy current pipe buffer over to a local copy, append them to active buffer,  
         Then return this array-of-strings.  
         """
-        pass
+        # TODO: trying to receive all tuples from the pipe
+        new_lines = []
+        while self.parent_pipe.poll():
+            new_lines.append(self.parent_pipe.recv())
 
+        # format a list of output strings
+        new_outputs = []
+        for line in new_lines:
+            # disassemble the tuple first
+            new_timestamp, new_string = line
+            if self.extra_timestamp:
+                new_string = str(new_timestamp) + self.delimiter + new_string
+            new_outputs.append(new_string)
+        self.active_buffer.append(new_outputs)
+        return new_outputs
