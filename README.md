@@ -17,4 +17,9 @@ Connect device (generate custom class, might need to modify device classes)
 Read data (timing will be controlled by frontend app, it'll send request for data in each cycle)  
 Start/end trial, mark event (user input taken by frontend, and an API takes that to backend)  
 
+### Backend maintains 2 buffers
+
+One volatile, used for API reads, the other is a larger and idle data structure that store all data so far.  
+On finish, both will be destroyed.  
+
 ### Figure out how to start the app with a webpage
