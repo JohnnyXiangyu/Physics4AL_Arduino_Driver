@@ -10,6 +10,13 @@
             "request": "launch",
             "program": "${workspaceFolder}/receive.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "testdriver",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/testdriver.py",
+            "console": "integratedTerminal"
         }
     ]
 }
