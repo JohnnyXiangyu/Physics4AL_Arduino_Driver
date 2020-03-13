@@ -36,4 +36,6 @@ On finish, both will be destroyed.
 
 * API that translate each data line to a common interface
 
+### On second thought, I shouldn't use the complicated multithreading device interface implemented rn. Just initialize the port and use the port as buffer is more than sufficient
+
 ### Figure out how to start the app with a webpage
