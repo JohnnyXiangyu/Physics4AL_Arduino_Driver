@@ -80,15 +80,19 @@ class SerialTextDevice:
         All read data will be converted to string for a serial text device.  
         """
         self.parent_pipe.close()
-        port = SerialPort(details['name'], details['br'])
-        if port.m_port == None:
-            err_text = port.m_error  # report error from port
+
+        # start port
+        try:
+            port = SerialPort(details['name'], details['br'])
+        except PortError as err:
             # deallocate the port (let port definition do the freeing work)
             port = None
-            raise(PortError(err_text))
-        else:
-            self.extra_timestamp = extra_timestamp
-            self.delimiter = delimiter
+            self.child_pipe.send(err.message)
+            self.child_pipe.close()
+            return
+
+        self.extra_timestamp = extra_timestamp
+        self.delimiter = delimiter
 
         time.sleep(0.1)
         port.flushInput()
@@ -125,7 +129,7 @@ class SerialTextDevice:
         except EOFError:
             raise(DeviceError('child process failed to start'))
         if start_message != 'child-started':
-            raise(DeviceError('child process failed to start'))
+            raise(DeviceError('child process failed to start: ' + start_message))
         else:
             self.is_active = True
             self.child_pipe.close()
